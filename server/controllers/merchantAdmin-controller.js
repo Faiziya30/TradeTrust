@@ -4,6 +4,7 @@ const Customer = require("../models/Customer");
 const Score = require("../models/Score");
 const InstallmentPlan = require("../models/InstallmentPlan");
 
+const logger = require('../middleware/logger');
 // mask helper
 function maskEmail(email) {
   if (!email) return "";
@@ -41,7 +42,7 @@ async function setThreshold(req, res) {
       merchant: { id: merchantUser._id, payLaterThreshold: threshold },
     });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'setThreshold error');
     return res.status(500).json({ message: "failed" });
   }
 }
@@ -73,7 +74,7 @@ async function listCustomers(req, res) {
     }
     res.json({ success: true, customers: results });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'listCustomers error');
     res.status(500).json({ message: "failed" });
   }
 }
@@ -106,7 +107,7 @@ async function getCustomerSummary(req, res) {
     };
     return res.json({ success: true, customer: safe });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, 'getCustomerSummary error');
     res.status(500).json({ message: "failed" });
   }
 }

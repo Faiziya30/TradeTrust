@@ -12,7 +12,9 @@ router.get("/ping", (req, res) => {
 });
 
 // realtime credit check
-router.post("/realtime", auth(), realtimeScore);
+const { validate } = require('../middleware/validate');
+const { realtimeSchema } = require('../validators/scoreValidators');
+router.post("/realtime", auth(), validate(realtimeSchema), realtimeScore);
 
 // analytics events
 router.get("/events", auth(), async (req, res) => {
@@ -32,7 +34,8 @@ router.get("/events", auth(), async (req, res) => {
       events,
     });
   } catch (err) {
-    console.error("score/events error:", err);
+    const logger = require('../middleware/logger');
+    logger.error({ err }, 'score/events error');
     return res.status(500).json({ message: err.message });
   }
 });

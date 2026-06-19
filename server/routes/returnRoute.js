@@ -12,14 +12,17 @@ const {
   listPendingReturns,
 } = require("../controllers/return-controller");
 
+const { validate } = require('../middleware/validate');
+const { requestReturnSchema, idOnly } = require('../validators/returnValidators');
+
 // Customer: request a return
-router.post("/:id/request-return", auth(), requestReturn);
+router.post("/:id/request-return", auth(), validate(requestReturnSchema), requestReturn);
 
 // Admin: approve return
-router.post("/:id/approve-return", auth(), requireMerchant, approveReturn);
+router.post("/:id/approve-return", auth(), requireMerchant, validate(idOnly), approveReturn);
 
 // Admin: reject return
-router.post("/:id/reject-return", auth(), requireMerchant, rejectReturn);
+router.post("/:id/reject-return", auth(), requireMerchant, validate(idOnly), rejectReturn);
 
 // Merchant: list pending return requests
 router.get("/returns/pending", auth(), requireMerchant, listPendingReturns);

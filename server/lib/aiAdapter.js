@@ -58,10 +58,13 @@ ${JSON.stringify(payload, null, 2)}
   const text = result.response.text();
 
   try {
-    console.log(JSON.parse(text));
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+    const logger = require('../middleware/logger');
+    logger.debug({ parsed }, 'Gemini parsed response');
+    return parsed;
   } catch (err) {
-    console.error("Gemini JSON parse error:", err.message, text);
+    const logger = require('../middleware/logger');
+    logger.error({ err: err.message, text }, 'Gemini JSON parse error');
     // safe fallback to rule score
     return {
       score: payload.ruleScore,

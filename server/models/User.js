@@ -5,7 +5,8 @@ const UserSchema = new mongoose.Schema({
   name: { type: String },
   email: { type: String, unique: true, required: true },
   passwordHash: { type: String, required: true },
-  role: { type: String, enum: ["customer", "merchant"], default: "customer" },
+  // include 'admin' role for admin-only APIs and RBAC
+  role: { type: String, enum: ["customer", "merchant", "admin"], default: "customer" },
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -2,6 +2,7 @@
 const Customer = require("../models/Customer");
 const Order = require("../models/Order");
 const { updateScore } = require("../lib/scoringEngine");
+const logger = require("../middleware/logger");
 
 /**
  * External -> internal booster key map (UI-friendly keys -> Customer schema keys)
@@ -59,7 +60,7 @@ const boostScore = async (req, res) => {
     return res.json({ success: true, booster: internalKey });
 
   } catch (err) {
-    console.error("Boost error:", err);
+    logger.error({ err }, 'Boost error');
     res.status(500).json({ message: "Booster failed" });
   }
 };

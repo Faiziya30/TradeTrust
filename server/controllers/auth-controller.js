@@ -3,8 +3,9 @@ const User = require("../models/User");
 const Customer = require("../models/Customer");
 const Score = require("../models/Score");
 const { calculateScore } = require("../lib/scoringEngine");
+const logger = require("../middleware/logger");
+const { JWT_SECRET } = require("../config/constants");
 
-const JWT_SECRET = process.env.JWT_SECRET || "devsecret";
 const TOKEN_EXPIRES = "7d";
 
 // signup
@@ -29,11 +30,7 @@ const signUp = async (req, res) => {
 
       // Calculate initial score (should be ~50 for new customer with no orders)
       const scoreResult = calculateScore(customerProfile.toObject(), []);
-      console.log(
-        `[SIGNUP] customerId=${
-          customerProfile._id
-        }, calculated scoreResult=${JSON.stringify(scoreResult)}`
-      );
+      logger.debug({ customerId: customerProfile._id, scoreResult }, "Initial score calculated");
 
       await Score.create({
         customerId: customerProfile._id,
@@ -50,9 +47,7 @@ const signUp = async (req, res) => {
           },
         ],
       });
-      console.log(
-        `[SIGNUP] Score doc created for ${customerProfile._id}: score=${scoreResult.score}, level=${scoreResult.level}`
-      );
+      logger.info({ customerId: customerProfile._id, score: scoreResult.score, level: scoreResult.level }, "Score doc created for new customer");
     }
 
     const token = jwt.sign(
@@ -66,7 +61,7 @@ const signUp = async (req, res) => {
       customerId: customerProfile?._id,
     });
   } catch (err) {
-    console.error("Signup error:", err);
+    logger.error({ err }, "Signup error");
     // Handle duplicate email error from MongoDB
     if (err.code === 11000) {
       return res.status(400).json({ message: "Email already registered" });
@@ -103,7 +98,7 @@ const login = async (req, res) => {
       customerId: customer?._id,
     });
   } catch (err) {
-    console.error("Login error:", err);
+    logger.error({ err }, "Login error");
     res.status(500).json({ message: "Login failed. Please try again." });
   }
 };

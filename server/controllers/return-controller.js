@@ -3,18 +3,19 @@ const Order = require("../models/Order");
 const Customer = require("../models/Customer");
 const ScoringEvent = require("../models/ScoringEvent");
 const { updateScore } = require("../lib/scoringEngine");
+const logger = require("../middleware/logger");
 
 // Customer -> request a return
 async function requestReturn(req, res) {
   try {
     const orderId = req.params.id;
-    console.log("Incoming return ID:", orderId);
+    logger.debug({ orderId }, "Incoming return request");
     const { reason } = req.body;
     const userCustomerId = req.user?.customerId;
 
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
-    console.log("Found order:", order?._id);
+    logger.debug({ orderId: order?._id }, "Found order for return");
 
     // Only the order owner can request return
     if (String(order.customerId) !== String(userCustomerId)) {
@@ -65,12 +66,12 @@ async function requestReturn(req, res) {
         },
       });
     } catch (err) {
-      console.warn("return request score refresh failed:", err.message);
+      logger.warn({ err: err.message }, "return request score refresh failed");
     }
 
     return res.json({ success: true, order });
   } catch (e) {
-    console.error("requestReturn error:", e);
+    logger.error({ err: e }, "requestReturn error");
     return res.status(500).json({ message: "Request failed" });
   }
 }
@@ -111,12 +112,12 @@ async function approveReturn(req, res) {
         },
       });
     } catch (err) {
-      console.warn("Could not update score after return approve:", err.message);
+      logger.warn({ err: err.message }, "Could not update score after return approve");
     }
 
     return res.json({ success: true, order });
   } catch (e) {
-    console.error("approveReturn error:", e);
+    logger.error({ err: e }, "approveReturn error");
     return res.status(500).json({ message: "Approve failed" });
   }
 }
@@ -146,11 +147,11 @@ async function rejectReturn(req, res) {
         orderId: order._id,
       });
     } catch (err) {
-      console.warn("Could not update score after return reject:", err.message);
+        logger.warn({ err: err.message }, "Could not update score after return reject");
     }
     return res.json({ success: true, order });
   } catch (e) {
-    console.error("rejectReturn error:", e);
+    logger.error({ err: e }, "rejectReturn error");
     return res.status(500).json({ message: "Reject failed" });
   }
 }
@@ -163,7 +164,7 @@ async function listPendingReturns(req, res) {
       .lean();
     return res.json({ success: true, orders });
   } catch (e) {
-    console.error("listPendingReturns error:", e);
+    logger.error({ err: e }, "listPendingReturns error");
     return res.status(500).json({ message: "Could not load pending returns" });
   }
 }

@@ -65,10 +65,38 @@ export default function App() {
             }
           />
 
-          <Route path="/profile/orders" element={<OrderHistory />} />
-          <Route path="/profile/notifications" element={<Notifications />} />
-          <Route path="/profile/boosters" element={<Boosters />} />
-          <Route path="/profile/installments" element={<Installments />} />
+          <Route
+            path="/profile/orders"
+            element={
+              <ProtectedRoute role="customer">
+                <OrderHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile/notifications"
+            element={
+              <ProtectedRoute role="customer">
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile/boosters"
+            element={
+              <ProtectedRoute role="customer">
+                <Boosters />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile/installments"
+            element={
+              <ProtectedRoute role="customer">
+                <Installments />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/merchant/dashboard"
             element={

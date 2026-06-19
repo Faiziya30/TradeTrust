@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const Customer = require("../models/Customer");
 const { updateScore } = require("../lib/scoringEngine");
+const logger = require("../middleware/logger");
 
 const OrderStatus = async (req, res) => {
   try {
@@ -47,7 +48,7 @@ const OrderStatus = async (req, res) => {
       scoreDoc,
     });
   } catch (err) {
-    console.error("Order status update error:", err);
+    logger.error({ err }, 'Order status update error');
     res.status(500).json({ message: "Status update failed" });
   }
 };

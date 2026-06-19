@@ -6,6 +6,7 @@ import CreditCheckModal from "../components/checkout/CreditCheckModal";
 import { API_BASE_URL, DEFAULT_MERCHANT_ID } from "../config";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { placeOrder } from "../api/order";
 
 export default function Checkout() {
   const { token, customerId, user } = useAuth();
@@ -90,26 +91,15 @@ export default function Checkout() {
     }
 
     try {
-      const body = {
+      await placeOrder({
+        token,
         items: cart.items,
         amount: cart.amount,
         merchantId: DEFAULT_MERCHANT_ID,
         paymentOption,
         installmentConfig: { count: installmentCount },
         payLaterDays,
-      };
-
-      const res = await fetch(`${API_BASE_URL}/api/orders`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
       });
-
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Order failed");
 
       // Clear cart
       localStorage.removeItem("cart");

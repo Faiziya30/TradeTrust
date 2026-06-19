@@ -6,20 +6,19 @@ const InstallmentPlan = require("../models/InstallmentPlan");
 const MerchantAction = require("../models/MerchantAction");
 const ScoringEvent = require("../models/ScoringEvent");
 const { updateScore } = require("../lib/scoringEngine");
+const logger = require("../middleware/logger");
 
 exports.getDashboard = async (req, res) => {
   try {
     const merchantId = req.params.merchantId; // allow string ids like "demo-store"
-    console.log(`[getDashboard] Fetching data for merchantId: ${merchantId}`);
+    logger.debug({ merchantId }, 'getDashboard: fetching data for merchant');
 
     // find distinct customerIds who ordered from this merchant
     const customerIds = await Order.distinct("customerId", { merchantId });
-    console.log(
-      `[getDashboard] Found ${customerIds.length} customers with orders`
-    );
+    logger.debug({ count: customerIds.length }, 'getDashboard: found customerIds');
 
     const customers = await Customer.find({ _id: { $in: customerIds } }).lean();
-    console.log(`[getDashboard] Fetched ${customers.length} customer docs`);
+    logger.debug({ customers: customers.length }, 'getDashboard: fetched customer docs');
 
     let low = 0,
       medium = 0,
@@ -50,10 +49,10 @@ exports.getDashboard = async (req, res) => {
         highRisk: high,
       },
     };
-    console.log(`[getDashboard] Returning:`, result);
+    logger.debug({ result }, 'getDashboard: returning result');
     res.json(result);
   } catch (err) {
-    console.error("Dashboard error:", err);
+    logger.error({ err }, 'Dashboard error');
     res.status(500).json({ message: "Dashboard load failed" });
   }
 };
@@ -64,21 +63,17 @@ exports.getCustomers = async (req, res) => {
     const skip = Math.max(0, parseInt(req.query.skip || "0", 10));
     const limit = Math.min(100, parseInt(req.query.limit || "50", 10));
 
-    console.log(
-      `[getCustomers] merchantId=${merchantId}, skip=${skip}, limit=${limit}`
-    );
+    logger.debug({ merchantId, skip, limit }, 'getCustomers parameters');
 
     const customerIds = await Order.distinct("customerId", { merchantId });
-    console.log(`[getCustomers] Found ${customerIds.length} customer IDs`);
+    logger.debug({ count: customerIds.length }, 'getCustomers: found customer IDs');
 
     const customers = await Customer.find({ _id: { $in: customerIds } })
       .skip(skip)
       .limit(limit)
       .lean();
 
-    console.log(
-      `[getCustomers] Fetched ${customers.length} customers after skip/limit`
-    );
+    logger.debug({ fetched: customers.length }, 'getCustomers: fetched customers');
 
     const enriched = [];
     for (const c of customers) {
@@ -92,12 +87,10 @@ exports.getCustomers = async (req, res) => {
       });
     }
 
-    console.log(
-      `[getCustomers] Returning ${enriched.length} enriched customers`
-    );
+    logger.debug({ enriched: enriched.length }, 'getCustomers: returning enriched');
     res.json({ customers: enriched });
   } catch (err) {
-    console.error("Customers fetch error:", err);
+    logger.error({ err }, 'Customers fetch error');
     res.status(500).json({ message: "Failed to fetch customers" });
   }
 };
@@ -121,7 +114,7 @@ exports.getCustomerDetail = async (req, res) => {
 
     res.json({ success: true, customer, orders, scores, plans });
   } catch (err) {
-    console.error("getCustomerDetail error:", err);
+    logger.error({ err }, 'getCustomerDetail error');
     res.status(500).json({ message: "Failed to fetch customer detail" });
   }
 };
@@ -174,11 +167,11 @@ exports.performAction = async (req, res) => {
         scoreDoc,
       });
     } catch (err) {
-      console.warn("Immediate score recompute failed:", err.message);
+      logger.warn({ err: err.message }, 'Immediate score recompute failed');
       return res.json({ success: true, action, customer });
     }
   } catch (err) {
-    console.error("Merchant action error:", err);
+    logger.error({ err }, 'Merchant action error');
     res.status(500).json({ message: "Action failed: " + err.message });
   }
 };
@@ -196,6 +189,7 @@ exports.getSuspiciousActivity = async (req, res) => {
       
     res.json({ success: true, activities });
   } catch (err) {
+    logger.error({ err }, 'getSuspiciousActivity error');
     res.status(500).json({ message: "Failed to load suspicious activity" });
   }
 };
@@ -208,7 +202,7 @@ exports.notifyCustomer = async (req, res) => {
     // In a real app, this would send an email/SMS or push notification
     // For now, we'll simulate it by creating a notification record if we had that model
     // or just logging it.
-    console.log(`[NOTIFY] Sending to customer ${customerId}: ${message}`);
+    logger.info({ customerId, message }, 'NOTIFY: Sending to customer');
     
     // We can use the existing pushNotification lib
     const { pushNotification } = require("../lib/notifications");
@@ -238,7 +232,7 @@ exports.notifyCustomer = async (req, res) => {
 
     res.json({ success: true, message: "Notification sent" });
   } catch (err) {
-    console.error("Notify error:", err);
+    logger.error({ err }, 'Notify error');
     res.status(500).json({ message: "Failed to notify customer" });
   }
 };

@@ -29,13 +29,14 @@ const req = http.request(options, (res) => {
     let body = '';
     res.on('data', chunk => body += chunk);
     res.on('end', () => {
-        console.log("Status:", res.statusCode);
-        console.log("Body:", body);
+        const logger = require('./middleware/logger');
+        logger.info({ status: res.statusCode, body }, 'Debug action response');
     });
 });
 
 req.on('error', error => {
-    console.error("Request error:", error);
+    const logger = require('./middleware/logger');
+    logger.error({ error }, 'Request error');
 });
 
 req.write(data);

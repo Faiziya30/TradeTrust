@@ -8,9 +8,11 @@ async function run() {
         await mongoose.connect(process.env.MONGO_URI);
         const orders = await Order.find({}).lean();
         fs.writeFileSync('orders_utf8.json', JSON.stringify(orders, null, 2), 'utf8');
-        console.log("Written to orders_utf8.json");
+        const logger = require('./middleware/logger');
+        logger.info('Written to orders_utf8.json');
     } catch (err) {
-        console.error(err);
+        const logger = require('./middleware/logger');
+        logger.error({ err }, 'debug_orders error');
     } finally {
         await mongoose.disconnect();
     }

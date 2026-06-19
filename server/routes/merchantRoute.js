@@ -10,37 +10,27 @@ const {
   getSuspiciousActivity,
   notifyCustomer,
 } = require("../controllers/merchant-controller");
+const { validate } = require('../middleware/validate');
+const { performActionSchema, notifySchema } = require('../validators/merchantValidators');
 
-// All merchant routes - auth check for production
-// For now, allowing all authenticated users to test
-router.get("/:merchantId/dashboard", getDashboard);
+// Secure merchant endpoints: require authentication for merchant-related data.
+// Dashboard and customers listing should be authenticated to avoid data leak.
+router.get('/:merchantId/dashboard', auth(), getDashboard);
 
-router.get("/:merchantId/customers", getCustomers);
+router.get('/:merchantId/customers', auth(), getCustomers);
 
 router.get(
-  "/:merchantId/customers/:customerId/detail",
+  '/:merchantId/customers/:customerId/detail',
   auth(),
   getCustomerDetail
 );
 
-router.post("/:merchantId/customers/:customerId/action", auth(), performAction);
+router.post('/:merchantId/customers/:customerId/action', auth(), validate(performActionSchema), performAction);
 
-router.get("/:merchantId/suspicious", auth(), getSuspiciousActivity);
-router.post("/:merchantId/customers/:customerId/notify", auth(), notifyCustomer);
+router.get('/:merchantId/suspicious', auth(), getSuspiciousActivity);
+router.post('/:merchantId/customers/:customerId/notify', auth(), validate(notifySchema), notifyCustomer);
 
-// Debug endpoint: check all orders
-router.get("/:merchantId/debug/all-orders", async (req, res) => {
-  try {
-    const Order = require("../models/Order");
-    const orders = await Order.find({}).limit(5).lean();
-    console.log("Sample orders:", orders);
-    res.json({
-      totalOrders: await Order.countDocuments(),
-      sampleOrders: orders,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// NOTE: removed debug endpoint that exposed raw orders. Keep debug-only helpers
+// out of production routes or guarded by environment checks.
 
 module.exports = router;

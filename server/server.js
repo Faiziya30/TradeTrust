@@ -7,6 +7,8 @@ const jwt = require("jsonwebtoken");
 const connectToDB = require("./db");
 const { generateChatReply } = require("./lib/chatBot");
 const mongoose = require("mongoose");
+const logger = require("./middleware/logger");
+const { JWT_SECRET } = require("./config/constants");
 
 const app = express();
 const allowedOrigins = process.env.CLIENT_URLS?.split(",") ||
@@ -34,23 +36,16 @@ const returnRoutes = require("./routes/returnRoute");
 app.use(cors(corsOptions));
 app.use(express.json());
 
-connectToDB()
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log("Mongo connection failed:", err));
+// Ensure JWT_SECRET is explicitly provided
+if (!JWT_SECRET) {
+  logger.error(
+    "FATAL: JWT_SECRET is not set. Set process.env.JWT_SECRET before starting the app."
+  );
+  process.exit(1);
+}
 
 const scoringWorker = require("./lib/scoringWorker");
 const reminderScheduler = require("./lib/reminderScheduler");
-
-try {
-  scoringWorker.start();
-} catch (e) {
-  console.error("scoringWorker failed to start:", e.message);
-}
-try {
-  reminderScheduler.start && reminderScheduler.start(1000 * 60 * 10);
-} catch (e) {
-  console.error("reminderScheduler failed to start:", e.message);
-}
 
 app.use("/api/customers", customerRoutes);
 app.use("/api/auth", authRoutes);
@@ -58,8 +53,7 @@ app.use("/api/orders", returnRoutes);
 // console.log("Resolved return routes:");
 returnRoutes.stack.forEach((l) => {
   if (l.route) {
-    console.log("METHOD:", Object.keys(l.route.methods)[0]);
-    console.log("PATH:  ", l.route.path);
+    logger.debug({ method: Object.keys(l.route.methods)[0], path: l.route.path }, "Resolved return route");
   }
 });
 
@@ -69,27 +63,57 @@ app.use("/api/merchants", merchantRoutes);
 app.use("/api/order-status", orderStatusRoutes);
 app.use("/api/installments", installmentRoutes);
 app.use("/api/admin", adminRoute);
-app.use("/api/merchant", merchantAdmin);
+// Mount merchant admin behind authentication so requireMerchant receives req.user
+const auth = require("./middleware/auth-middleware");
+app.use("/api/merchant", auth(), merchantAdmin);
 app.use("/api/score", scoreRoutes);
 
-app.get("/dev/reset-db", async (req, res) => {
-  try {
-    const collections = await mongoose.connection.db
-      .listCollections()
-      .toArray();
-    const keep = ["users", "customers"];
+// Developer-only helper routes
+if (process.env.NODE_ENV === "development") {
+  app.post("/dev/reset-db", async (req, res) => {
+    try {
+      const collections = await mongoose.connection.db
+        .listCollections()
+        .toArray();
+      const keep = ["users", "customers"];
 
-    for (const col of collections) {
-      if (!keep.includes(col.name)) {
-        await mongoose.connection.dropCollection(col.name).catch(() => {});
+      for (const col of collections) {
+        if (!keep.includes(col.name)) {
+          await mongoose.connection.dropCollection(col.name).catch(() => {});
+        }
       }
-    }
 
-    res.send("DB reset except users & customers");
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
+      res.send("DB reset except users & customers");
+    } catch (err) {
+      res.status(500).send(err.message);
+    }
+  });
+
+  // Lightweight seed endpoint for local development: creates a test user + customer
+  app.post("/seed", async (req, res) => {
+    try {
+      const User = require("./models/User");
+      const Customer = require("./models/Customer");
+      const email = req.body?.email || `dev+${Date.now()}@example.com`;
+      const name = req.body?.name || "Dev Customer";
+      const password = req.body?.password || "password123";
+
+      let existing = await User.findOne({ email });
+      if (existing) return res.json({ message: "User exists", user: existing });
+
+      const user = new User({ name, email, role: "customer" });
+      await user.setPassword(password);
+      await user.save();
+
+      const customer = await Customer.create({ name, email });
+
+      return res.json({ user: { _id: user._id, email: user.email }, customer });
+    } catch (err) {
+      logger.error({ err }, "/seed error");
+      res.status(500).json({ message: err.message });
+    }
+  });
+}
 
 // console.log("Loaded return routes:");
 // console.log(require("./routes/returnRoute"));
@@ -98,8 +122,6 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: corsOptions,
 });
-const JWT_SECRET = process.env.JWT_SECRET || "devsecret";
-
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
   if (!token) return next(new Error("Unauthorized"));
@@ -112,7 +134,7 @@ io.use((socket, next) => {
 });
 
 io.on("connection", (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
+  logger.info({ socketId: socket.id }, `Socket connected`);
 
   socket.on("chat:message", async (payload = {}) => {
     const prompt = payload.prompt || "";
@@ -137,7 +159,7 @@ io.on("connection", (socket) => {
         ts: Date.now(),
       });
     } catch (err) {
-      console.error("chat:message error", err);
+      logger.error({ err }, "chat:message error");
       socket.emit("chat:error", {
         message: "I couldn't retrieve your data. Try again shortly.",
       });
@@ -145,11 +167,32 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log(`Socket disconnected: ${socket.id}`);
+    logger.info({ socketId: socket.id }, `Socket disconnected`);
   });
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+
+const startServer = async () => {
+  await connectToDB();
+
+  try {
+    scoringWorker.start();
+  } catch (e) {
+    logger.warn({ err: e }, "scoringWorker failed to start");
+  }
+  try {
+    reminderScheduler.start && reminderScheduler.start(1000 * 60 * 10);
+  } catch (e) {
+    logger.warn({ err: e }, "reminderScheduler failed to start");
+  }
+
+  server.listen(PORT, () => {
+    logger.info({ port: PORT }, `🚀 Server running`);
+  });
+};
+
+startServer().catch((err) => {
+  logger.error({ err }, "Failed to start server");
+  process.exit(1);
 });

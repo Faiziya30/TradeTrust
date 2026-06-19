@@ -4,6 +4,7 @@ const Customer = require("../models/Customer");
 const Order = require("../models/Order");
 const Score = require("../models/Score");
 const { calculateScore } = require("./scoringEngine");
+const logger = require("../middleware/logger");
 
 let running = false;
 const POLL_MS = 3000;
@@ -73,7 +74,7 @@ async function processOne(event) {
 
     return scoreDoc;
   } catch (err) {
-    console.error("processOne error:", err);
+    logger.error({ err }, 'processOne error');
 
     try {
       event.error = err.message;
@@ -105,7 +106,7 @@ async function pollLoop() {
         await new Promise((r) => setTimeout(r, POLL_MS));
       }
     } catch (err) {
-      console.error("worker loop error:", err);
+      logger.error({ err }, 'worker loop error');
       await new Promise((r) => setTimeout(r, POLL_MS));
     }
   }
@@ -114,7 +115,7 @@ async function pollLoop() {
 function start() {
   if (!running) {
     pollLoop();
-    console.log("Scoring worker started (DB poll).");
+    logger.info("Scoring worker started (DB poll).");
   }
 }
 

@@ -1,6 +1,7 @@
 // lib/scoringEngine.js
 const Score = require("../models/Score");
 const Customer = require("../models/Customer");
+const logger = require('../middleware/logger');
 
 // safe number parse
 function n(v, fallback = 0) {
@@ -221,12 +222,12 @@ module.exports = {
           },
         });
       } catch (e) {
-        console.warn("Could not update customer summary fields:", e.message);
+        logger.warn({ err: e.message }, 'Could not update customer summary fields');
       }
 
       return { scoreDoc, result };
     } catch (e) {
-      console.error("updateScore error:", e);
+      logger.error({ err: e }, 'updateScore error');
       throw e;
     }
   },

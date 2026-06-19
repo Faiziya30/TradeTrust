@@ -84,10 +84,11 @@ async function generateChatReply(customerId, prompt = "") {
             recommendations: recommendations.slice(0, 3),
         }
 
-      } catch (err) {
-          console.error("Gemini Chatbot Error:", err.message);
+        } catch (err) {
+          const logger = require('../middleware/logger');
+          logger.error({ err: err.message }, 'Gemini Chatbot Error');
           // Fallback to keyword matching below
-      }
+        }
   }
 
   // FALLBACK LOGIC (Original keyword matching)

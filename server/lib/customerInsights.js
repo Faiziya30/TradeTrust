@@ -191,7 +191,8 @@ async function collectCustomerInsights(customerId, opts = {}) {
   const skipRefresh = Boolean(opts.skipRefresh);
   const customer = await Customer.findById(customerId).lean();
   if (!customer) return null;
-  console.log(`[collectCustomerInsights] customerId=${customerId}`);
+  const logger = require('../middleware/logger');
+  logger.debug({ customerId }, 'collectCustomerInsights start');
   let [scores, orders, notifications, installments] = await Promise.all([
     Score.find({ customerId }).sort({ createdAt: -1 }).limit(scoreLimit).lean(),
     Order.find({ customerId }).sort({ createdAt: -1 }).limit(orderLimit).lean(),
@@ -205,9 +206,7 @@ async function collectCustomerInsights(customerId, opts = {}) {
       .lean(),
   ]);
 
-  console.log(
-    `[collectCustomerInsights] scores=${scores.length}, orders=${orders.length}, latestScore=${scores[0]?.score}`
-  );
+  logger.debug({ scores: scores.length, orders: orders.length, latestScore: scores[0]?.score }, 'collectCustomerInsights fetched counts');
 
   // Get ALL orders for accurate stats calculation (not just the limited display set)
   // Populate items.productId to get names
@@ -252,7 +251,7 @@ async function collectCustomerInsights(customerId, opts = {}) {
       // prepend fresh score for downstream mapping
       scores = [scoreDoc.toObject(), ...scores];
     } catch (e) {
-      console.warn("on-demand score refresh failed:", e.message);
+      logger.warn({ err: e.message }, 'on-demand score refresh failed');
     }
   }
 

@@ -31,7 +31,8 @@ async function listUsers(req, res) {
 
     res.json({ success: true, users: results });
   } catch (err) {
-    console.error("admin listUsers error:", err);
+    const logger = require('../middleware/logger');
+    logger.error({ err }, 'admin listUsers error');
     res.status(500).json({ message: "failed" });
   }
 }
@@ -54,7 +55,8 @@ async function getUserDetail(req, res) {
 
     res.json({ success: true, user: u, orders, scores, plans });
   } catch (err) {
-    console.error("admin getUserDetail error:", err);
+    const logger = require('../middleware/logger');
+    logger.error({ err }, 'admin getUserDetail error');
     res.status(500).json({ message: "failed" });
   }
 }

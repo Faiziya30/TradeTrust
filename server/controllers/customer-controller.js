@@ -13,6 +13,7 @@ const {
 const { pushNotification } = require("../lib/notifications");
 const { calculateScore } = require("../lib/scoringEngine");
 const aiAdapter = require("../lib/aiAdapter");
+const logger = require('../middleware/logger');
 
 // getProfile unchanged but ensure we surface structured latestScore.reasons
 exports.getProfile = async (req, res) => {
@@ -70,7 +71,7 @@ exports.getProfile = async (req, res) => {
       boosterTasks: insights.boosterTasks,
     });
   } catch (err) {
-    console.error("getProfile error:", err);
+    logger.error({ err }, 'getProfile error');
     res.status(500).json({ message: "Failed to load profile" });
   }
 };
@@ -139,7 +140,7 @@ exports.updateBooster = async (req, res) => {
 
     res.json({ success: true, customer: customer });
   } catch (err) {
-    console.error("updateBooster error:", err);
+    logger.error({ err }, 'updateBooster error');
     res.status(500).json({ message: "Unable to update booster" });
   }
 };
@@ -180,7 +181,7 @@ exports.getScoreDetails = async (req, res) => {
       aiScore = aiResponse?.score ?? ruleResult.score;
       aiReasons = Array.isArray(aiResponse?.reasons) ? aiResponse.reasons : [];
     } catch (err) {
-      console.warn("AI score explanation failed:", err.message || err);
+      logger.warn({ err: err.message || err }, 'AI score explanation failed');
     }
 
     const combinedReasons = [...aiReasons, ...ruleResult.reasons]
@@ -206,7 +207,7 @@ exports.getScoreDetails = async (req, res) => {
       features: ruleResult.features,
     });
   } catch (err) {
-    console.error("getScoreDetails error:", err);
+    logger.error({ err }, 'getScoreDetails error');
     // Even on error, return a default score instead of 500
     return res.json({
       success: false,
@@ -253,8 +254,8 @@ exports.markNotificationRead = async (req, res) => {
     await note.save();
 
     res.json({ success: true, message: "Marked as read" });
-  } catch(e) {
-      console.error(e);
+    } catch(e) {
+      logger.error({ err: e }, 'markNotificationRead error');
       res.status(500).json({ message: "Action failed" });
-  }
+    }
 };

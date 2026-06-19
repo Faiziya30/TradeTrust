@@ -6,6 +6,7 @@ const SECRET = "devsecret";
 // If .env has a different secret, this will fail. But .env showed MONGO_URI, not JWT_SECRET.
 
 const token = jwt.sign({ customerId: "692f53d46930aa63121c63f0", role: "customer" }, SECRET);
+const logger = require('./middleware/logger');
 
 const data = JSON.stringify({
     items: [{ productId: "test-prod", name: "Test Item Verification", price: 100, qty: 1 }],
@@ -30,23 +31,22 @@ const req = http.request(options, (res) => {
     let body = '';
     res.on('data', chunk => body += chunk);
     res.on('end', () => {
-        console.log("Order Response Code:", res.statusCode);
+        logger.info({ statusCode: res.statusCode }, 'Order Response Code');
         try {
             const json = JSON.parse(body);
             if(json.order && json.order.merchantId === 'demo-store') {
-                console.log("SUCCESS: Order created with merchantId 'demo-store'");
+                logger.info("SUCCESS: Order created with merchantId 'demo-store'");
             } else {
-                console.log("FAILURE: merchantId is " + (json.order ? json.order.merchantId : "not in response"));
-                console.log("Full Response:", body);
+                logger.warn({ merchantId: json.order ? json.order.merchantId : undefined, body }, "FAILURE: unexpected merchantId");
             }
         } catch(e) {
-            console.log("Error parsing response:", body);
+            logger.error({ body }, 'Error parsing response');
         }
     });
 });
 
 req.on('error', error => {
-    console.error("Request error:", error);
+    logger.error({ error }, 'Request error');
 });
 
 req.write(data);

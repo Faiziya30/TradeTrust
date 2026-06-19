@@ -1,6 +1,7 @@
 // middleware/auth-middleware.js
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "devsecret";
+const logger = require('./logger');
+const { JWT_SECRET } = require("../config/constants");
 
 function auth(requiredRole) {
   return (req, res, next) => {
@@ -25,7 +26,7 @@ function auth(requiredRole) {
       }
       next();
     } catch (err) {
-      console.error("auth error:", err.message);
+      logger.warn({ err: err.message }, 'auth error');
       return res.status(401).json({ message: "Invalid token" });
     }
   };

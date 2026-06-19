@@ -135,8 +135,9 @@ async function runOnce() {
 let interval = null;
 function start(intervalMs = 1000 * 60 * 30) {
   if (interval) return;
-  interval = setInterval(() => runOnce().catch(console.error), intervalMs);
-  console.log("Reminder scheduler started.");
+  const logger = require('../middleware/logger');
+  interval = setInterval(() => runOnce().catch((err) => logger.error({ err }, 'reminderScheduler runOnce error')), intervalMs);
+  logger.info('Reminder scheduler started.');
 }
 function stop() {
   if (interval) {

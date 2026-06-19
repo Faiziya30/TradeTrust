@@ -5,19 +5,20 @@ const auth = require("../middleware/auth-middleware");
 const adminController = require("../controllers/admin-controller");
 
 // POST /api/admin/merchant/:merchantId/threshold
-router.post("/merchant/:merchantId/threshold", async (req, res) => {
+const { validate } = require('../middleware/validate');
+const { thresholdSchema } = require('../validators/adminValidators');
+router.post("/merchant/:merchantId/threshold", validate(thresholdSchema), async (req, res) => {
   try {
     const { merchantId } = req.params;
     const { threshold } = req.body;
-    if (typeof threshold !== "number")
-      return res.status(400).json({ message: "threshold number expected" });
     const m = await User.findById(merchantId);
     if (!m) return res.status(404).json({ message: "merchant not found" });
     m.payLaterThreshold = threshold;
     await m.save();
     res.json({ success: true, merchant: m });
   } catch (err) {
-    console.error(err);
+    const logger = require('../middleware/logger');
+    logger.error({ err }, 'adminRoute /merchant/:merchantId/threshold error');
     res.status(500).json({ message: "failed" });
   }
 });

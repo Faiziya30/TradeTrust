@@ -30,7 +30,8 @@ exports.realtimeScore = async (req, res) => {
     try {
       aiResp = await aiAdapter.callModel(payload);
     } catch (e) {
-      console.warn("AI realtime call failed:", e.message || e);
+      const logger = require('../middleware/logger');
+      logger.warn({ err: e.message || e }, 'AI realtime call failed');
     }
 
     const aiScore = aiResp?.score ?? ruleResult.score;
@@ -68,7 +69,8 @@ exports.realtimeScore = async (req, res) => {
       plan,
     });
   } catch (err) {
-    console.error("realtimeScore error:", err);
+    const logger = require('../middleware/logger');
+    logger.error({ err }, 'realtimeScore error');
     res.status(500).json({ message: "realtime scoring failed" });
   }
 };
