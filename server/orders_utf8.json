@@ -1,0 +1,29 @@
+[
+  {
+    "_id": "6944b1de3095d414099a4d09",
+    "customerId": "692f53d46930aa63121c63f0",
+    "merchantId": "demo-store",
+    "items": [
+      {
+        "name": "Samsung Galaxy M34 5G",
+        "price": 17999,
+        "qty": 2,
+        "_id": "6944b1de3095d414099a4d0a"
+      },
+      {
+        "name": "Realme 11 Pro+ 5G",
+        "price": 25999,
+        "qty": 2,
+        "_id": "6944b1de3095d414099a4d0b"
+      }
+    ],
+    "amount": 87996,
+    "paymentOption": "pay_now",
+    "status": "paid",
+    "returnStatus": "none",
+    "returnReason": "",
+    "createdAt": "2025-12-19T02:01:02.649Z",
+    "updatedAt": "2025-12-19T02:01:02.649Z",
+    "__v": 0
+  }
+]
